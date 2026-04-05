@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Persistent Segment Tree — C++</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg2: #0f1218;
+    --bg3: #151b24;
+    --surface: #1a2133;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --glow: rgba(0,212,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridPan 20s linear infinite;
+  }
+
+  @keyframes gridPan {
+    from { transform: translate(0,0); }
+    to   { transform: translate(60px,60px); }
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
+
+  .hero-glow2 {
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%);
+    top: 20%; right: 10%;
+    pointer-events: none;
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    padding: 0.35rem 1rem;
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    animation: fadeUp 0.8s 0.1s ease both;
+    position: relative;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--text2);
+    max-width: 560px;
+    margin-top: 1.2rem;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .hero-badges {
+    display: flex; gap: 0.75rem; flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 2rem;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .badge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text2);
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .badge .dot.y { background: var(--accent3); }
+  .badge .dot.p { background: var(--accent2); }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    color: var(--text3);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    animation: fadeUp 1s 0.5s ease both;
+  }
+
+  .scroll-arrow {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 2s infinite;
+  }
+
+  @keyframes scrollPulse {
+    0%,100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* LAYOUT */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* SECTIONS */
+  .section {
+    padding: 5rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title span { color: var(--accent); }
+
+  p { color: var(--text2); margin-bottom: 1rem; }
+
+  /* INFO BOX */
+  .info-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .info-box.warn { border-left-color: var(--accent3); }
+  .info-box.success { border-left-color: var(--green); }
+  .info-box.purple { border-left-color: var(--accent2); }
+
+  .info-box strong {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+  }
+
+  .info-box.warn strong { color: var(--accent3); }
+  .info-box.success strong { color: var(--green); }
+  .info-box.purple strong { color: var(--accent2); }
+
+  .info-box p { margin: 0; font-size: 0.95rem; }
+
+  /* CARDS GRID */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+
+  .card-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .card p { font-size: 0.875rem; margin: 0; }
+
+  /* CODE BLOCK */
+  .code-wrap {
+    margin: 2rem 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .code-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .code-dots {
+    display: flex; gap: 6px;
+  }
+
+  .code-dots span {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+
+  .code-dots span:nth-child(1) { background: #ef4444; }
+  .code-dots span:nth-child(2) { background: var(--accent3); }
+  .code-dots span:nth-child(3) { background: var(--green); }
+
+  .code-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text3);
+  }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  pre {
+    background: #0d1117;
+    overflow-x: auto;
+    padding: 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+
+  /* Syntax colors */
+  .kw { color: #ff7b72; }       /* keywords */
+  .ty { color: #79c0ff; }       /* types */
+  .fn { color: #d2a8ff; }       /* functions */
+  .nu { color: #f0883e; }       /* numbers */
+  .cm { color: #8b949e; font-style: italic; } /* comments */
+  .st { color: #a5d6ff; }       /* strings */
+  .op { color: #ff7b72; }       /* operators */
+  .va { color: #e2e8f0; }       /* variables */
+  .sc { color: #7ee787; }       /* special / struct names */
+  .pu { color: #e2e8f0; }       /* punctuation */
+
+  /* COMPLEXITY TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  th {
+    background: var(--surface);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  tr:hover td { background: var(--bg3); }
+
+  td code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    background: var(--surface);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    color: var(--accent3);
+  }
+
+  /* VISUAL DIAGRAM */
+  .diagram-wrap {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2rem;
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  .diagram-wrap h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    color: var(--text3);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  svg text { font-family: 'JetBrains Mono', monospace; }
+
+  /* STEP LIST */
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    margin: 1.5rem 0;
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-start;
+  }
+
+  .steps li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    min-width: 36px; height: 36px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .steps li div { padding-top: 0.3rem; }
+  .steps li strong { display: block; color: var(--text); margin-bottom: 0.25rem; font-family: 'Syne', sans-serif; }
+  .steps li p { margin: 0; font-size: 0.9rem; }
+
+  /* INLINE CODE */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    background: rgba(0,212,255,0.08);
+    color: var(--accent);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  /* APP INDEX */
+  .app-index {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+
+  .app-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text2);
+    transition: all 0.2s;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .app-item:hover { border-color: var(--accent2); color: var(--text); }
+  .app-item .ic { font-size: 1rem; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem 0;
+    text-align: center;
+    color: var(--text3);
+    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* DIVIDER */
+  .divider {
+    width: 60px; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    margin: 1rem 0 1.5rem;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,12,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .nav-links {
+    display: flex; gap: 0.25rem;
+  }
+
+  .nav-links a {
+    color: var(--text3);
+    text-decoration: none;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .nav-links a:hover { color: var(--text); background: var(--surface); }
+
+  @media (max-width: 600px) {
+    .nav-links { display: none; }
+    .cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">PST.cpp</span>
+  <div class="nav-links">
+    <a href="#concept">Khái niệm</a>
+    <a href="#build">Xây dựng</a>
+    <a href="#code">Code</a>
+    <a href="#apply">Ứng dụng</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <span class="tag">// Advanced Data Structures</span>
+  <h1>Persistent<br><span>Segment Tree</span></h1>
+  <p class="hero-sub">Cây phân đoạn bền vững — lưu toàn bộ lịch sử cập nhật, truy vấn trên bất kỳ phiên bản nào trong <strong style="color:var(--accent)">O(log n)</strong>.</p>
+  <div class="hero-badges">
+    <span class="badge"><span class="dot"></span> O(log n) update</span>
+    <span class="badge"><span class="dot y"></span> O(log n) query</span>
+    <span class="badge"><span class="dot p"></span> O(n log n) space</span>
+  </div>
+  <div class="scroll-hint">
+    <span>scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- SECTION 1: CONCEPT -->
+<section class="section" id="concept">
+  <div class="container">
+    <div class="section-label">01 — Khái niệm</div>
+    <h2 class="section-title">PST là <span>gì</span>?</h2>
+    <div class="divider"></div>
+    <p>
+      <strong style="color:var(--text)">Persistent Segment Tree (PST)</strong> — hay còn gọi là <em>Cây phân đoạn bền vững</em> — là một biến thể của Segment Tree truyền thống cho phép <strong style="color:var(--accent)">lưu trữ nhiều phiên bản</strong> của cây sau mỗi thao tác cập nhật. Thay vì ghi đè node cũ, PST tạo node mới chỉ trên <em>đường đi từ gốc đến lá</em>.
+    </p>
+
+    <div class="info-box">
+      <strong>💡 Trực giác</strong>
+      <p>Hãy tưởng tượng Segment Tree thông thường như một cuốn sổ — mỗi lần sửa, bạn xóa và viết lại. PST giống như sao chép cuốn sổ trước khi sửa, nhưng thông minh hơn: nó <strong>chỉ sao chép các trang có thay đổi</strong>, chia sẻ những trang không đổi với phiên bản cũ.</p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🌲</div>
+        <h3>Segment Tree gốc</h3>
+        <p>Mỗi update ghi đè O(log n) node. Không lưu lịch sử. Chỉ có 1 phiên bản tại mọi thời điểm.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔀</div>
+        <h3>Path Copying</h3>
+        <p>Kỹ thuật cốt lõi của PST. Chỉ tạo mới các node trên đường đi root→leaf, tái sử dụng phần còn lại.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📸</div>
+        <h3>Snapshot / Version</h3>
+        <p>Mỗi update tạo ra root mới. Lưu mảng <code>root[]</code> → truy cập phiên bản bất kỳ trong O(log n).</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧮</div>
+        <h3>Không gian</h3>
+        <p>Mỗi update tạo thêm O(log n) node. Tổng: O(n log n). Cần cấp phát node bằng pool tĩnh.</p>
+      </div>
+    </div>
+
+    <!-- Diagram: Path Copying -->
+    <div class="diagram-wrap">
+      <h4>Path Copying — Ví dụ cập nhật index 3</h4>
+      <svg viewBox="0 0 760 300" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <!-- VERSION 0 (left) -->
+        <text x="10" y="20" fill="#8b949e" font-size="11">Phiên bản 0 (gốc)</text>
+        <!-- edges v0 -->
+        <line x1="130" y1="50" x2="80" y2="110" stroke="#1e2d45" stroke-width="1.5"/>
+        <line x1="130" y1="50" x2="180" y2="110" stroke="#1e2d45" stroke-width="1.5"/>
+        <line x1="80"  y1="110" x2="55"  y2="175" stroke="#1e2d45" stroke-width="1.5"/>
+        <line x1="80"  y1="110" x2="105" y2="175" stroke="#1e2d45" stroke-width="1.5"/>
+        <line x1="180" y1="110" x2="155" y2="175" stroke="#1e2d45" stroke-width="1.5"/>
+        <line x1="180" y1="110" x2="205" y2="175" stroke="#1e2d45" stroke-width="1.5"/>
+        <!-- nodes v0 -->
+        <circle cx="130" cy="50"  r="20" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <circle cx="80"  cy="110" r="18" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <circle cx="180" cy="110" r="18" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <circle cx="55"  cy="175" r="14" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <circle cx="105" cy="175" r="14" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <circle cx="155" cy="175" r="14" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <circle cx="205" cy="175" r="14" fill="#1a2133" stroke="#1e2d45" stroke-width="1.5"/>
+        <!-- labels v0 -->
+        <text x="130" y="55" text-anchor="middle" fill="#94a3b8" font-size="10">root0</text>
+        <text x="80"  y="115" text-anchor="middle" fill="#94a3b8" font-size="9">[1,2]</text>
+        <text x="180" y="115" text-anchor="middle" fill="#94a3b8" font-size="9">[3,4]</text>
+        <text x="55"  y="180" text-anchor="middle" fill="#94a3b8" font-size="9">1</text>
+        <text x="105" y="180" text-anchor="middle" fill="#94a3b8" font-size="9">2</text>
+        <text x="155" y="180" text-anchor="middle" fill="#94a3b8" font-size="9">3</text>
+        <text x="205" y="180" text-anchor="middle" fill="#94a3b8" font-size="9">4</text>
+
+        <!-- ARROW -->
+        <text x="270" y="130" fill="#00d4ff" font-size="13">update</text>
+        <text x="268" y="145" fill="#00d4ff" font-size="10">index=3</text>
+        <path d="M 255 140 Q 310 140 340 140" stroke="#00d4ff" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00d4ff"/>
+          </marker>
+        </defs>
+
+        <!-- VERSION 1 (right) — new nodes highlighted -->
+        <text x="360" y="20" fill="#8b949e" font-size="11">Phiên bản 1 (sau update)</text>
+        <!-- shared edges (grey) -->
+        <line x1="540" y1="110" x2="490" y2="175" stroke="#1e2d45" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="540" y1="110" x2="540" y2="175" stroke="#1e2d45" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <!-- new path edges (blue) -->
+        <line x1="490" y1="50" x2="430" y2="110" stroke="#00d4ff" stroke-width="2" opacity="0.5"/>
+        <line x1="490" y1="50" x2="540" y2="110" stroke="#00d4ff" stroke-width="2" opacity="0.5"/>
+        <line x1="540" y1="110" x2="570" y2="175" stroke="#00d4ff" stroke-width="2" opacity="0.5"/>
+        <!-- shared pointers to old nodes -->
+        <line x1="430" y1="110" x2="80"  y2="110" stroke="#64748b" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+
+        <!-- shared nodes (old, grey) -->
+        <circle cx="80"  cy="110" r="18" fill="#0f1218" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+        <circle cx="490" cy="175" r="14" fill="#0f1218" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+        <circle cx="540" cy="175" r="14" fill="#0f1218" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+
+        <!-- NEW nodes (cyan glow) -->
+        <circle cx="490" cy="50"  r="20" fill="#0a1a2a" stroke="#00d4ff" stroke-width="2"/>
+        <circle cx="430" cy="110" r="18" fill="#0a1a2a" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>
+        <circle cx="540" cy="110" r="18" fill="#0a1a2a" stroke="#00d4ff" stroke-width="2"/>
+        <circle cx="570" cy="175" r="14" fill="#0a1a2a" stroke="#00d4ff" stroke-width="2"/>
+
+        <!-- labels v1 -->
+        <text x="490" y="55" text-anchor="middle" fill="#00d4ff" font-size="10">root1</text>
+        <text x="430" y="115" text-anchor="middle" fill="#64748b" font-size="9">[1,2]</text>
+        <text x="540" y="115" text-anchor="middle" fill="#00d4ff" font-size="9">[3,4]</text>
+        <text x="490" y="180" text-anchor="middle" fill="#64748b" font-size="9">3(old)</text>
+        <text x="540" y="180" text-anchor="middle" fill="#64748b" font-size="9">4(old)</text>
+        <text x="570" y="180" text-anchor="middle" fill="#00d4ff" font-size="9">3★</text>
+
+        <!-- LEGEND -->
+        <rect x="360" y="230" width="14" height="14" rx="2" fill="#0a1a2a" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="380" y="242" fill="#94a3b8" font-size="11">Node mới (tạo thêm)</text>
+        <rect x="360" y="252" width="14" height="14" rx="2" fill="#0f1218" stroke="#64748b" stroke-width="1.5" opacity="0.6"/>
+        <text x="380" y="264" fill="#94a3b8" font-size="11">Node chia sẻ (tái sử dụng)</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: BUILD -->
+<section class="section" id="build">
+  <div class="container">
+    <div class="section-label">02 — Xây dựng</div>
+    <h2 class="section-title">Các bước <span>triển khai</span></h2>
+    <div class="divider"></div>
+
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>Định nghĩa cấu trúc Node</strong>
+          <p>Mỗi node lưu <code>val</code> (tổng/min/max...), con trái <code>l</code>, con phải <code>r</code>. Dùng <strong>pool cấp phát tĩnh</strong> thay cho <code>new</code> để tránh TLE.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Build cây phiên bản 0</strong>
+          <p>Hàm <code>build(l, r)</code> đệ quy giống Segment Tree thông thường. Trả về index node trong pool. Lưu vào <code>root[0]</code>.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Hàm Update — tạo phiên bản mới</strong>
+          <p>Hàm <code>update(prev, l, r, pos, val)</code> nhận root phiên bản cũ. Đi từ gốc đến lá theo <code>pos</code>, tạo node mới trên đường đi, copy con còn lại từ phiên bản cũ. Trả về root mới → lưu <code>root[i]</code>.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Hàm Query — truy vấn phiên bản bất kỳ</strong>
+          <p>Hàm <code>query(node, l, r, ql, qr)</code> hoạt động y hệt Segment Tree thông thường, nhưng bắt đầu từ <code>root[version]</code> tùy chọn.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Ứng dụng đặc biệt — Merge hai cây</strong>
+          <p>Với bài toán offline hoặc đếm trên đoạn: dùng PST trên mảng sau khi nén tọa độ (<em>coordinate compression</em>). Query = <code>query(root[r]) - query(root[l-1])</code>.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="info-box warn">
+      <strong>⚠️ Lưu ý quan trọng</strong>
+      <p>Số node tối đa cần cấp phát: <code>(n + q) * 40</code> là an toàn với n, q ≤ 10⁵. Đừng dùng <code>new Node()</code> vì sẽ rất chậm — luôn dùng pool tĩnh với biến đếm <code>cnt</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3: CODE -->
+<section class="section" id="code">
+  <div class="container">
+    <div class="section-label">03 — Implementation</div>
+    <h2 class="section-title">Code <span>C++</span> đầy đủ</h2>
+    <div class="divider"></div>
+    <p>Template PST tổng quát với ví dụ bài toán <strong style="color:var(--text)">K-th smallest trên đoạn [l, r]</strong> — một trong những ứng dụng kinh điển nhất.</p>
+
+    <!-- FULL TEMPLATE -->
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <span class="code-title">pst_template.cpp</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre id="code-main"><span class="cm">// ═══════════════════════════════════════════════
+//  Persistent Segment Tree — Template C++
+//  Bài: K-th smallest trên đoạn [l, r]
+// ═══════════════════════════════════════════════</span>
+<span class="kw">#include</span> <span class="st">&lt;bits/stdc++.h&gt;</span>
+<span class="kw">using namespace</span> std;
+
+<span class="kw">const int</span> <span class="va">MAXN</span> = <span class="nu">1e5</span> + <span class="nu">5</span>;
+<span class="kw">const int</span> <span class="va">MAXLOG</span> = <span class="nu">40</span>;   <span class="cm">// log2(MAXN) * constant</span>
+
+<span class="cm">// ───── Node Pool ─────</span>
+<span class="kw">struct</span> <span class="sc">Node</span> {
+    <span class="ty">int</span> <span class="va">l</span>, <span class="va">r</span>;   <span class="cm">// index con trái, con phải trong pool</span>
+    <span class="ty">int</span> <span class="va">val</span>;    <span class="cm">// tổng / đếm / ...</span>
+} <span class="va">tree</span>[MAXN * MAXLOG];
+
+<span class="ty">int</span> <span class="va">cnt</span> = <span class="nu">0</span>;          <span class="cm">// số node đã dùng</span>
+<span class="ty">int</span> <span class="va">root</span>[MAXN];      <span class="cm">// root[i] = root phiên bản thứ i</span>
+
+<span class="cm">// ───── Tạo node mới ─────</span>
+<span class="ty">int</span> <span class="fn">newNode</span>() {
+    ++<span class="va">cnt</span>;
+    <span class="va">tree</span>[<span class="va">cnt</span>] = {<span class="nu">0</span>, <span class="nu">0</span>, <span class="nu">0</span>};
+    <span class="kw">return</span> <span class="va">cnt</span>;
+}
+
+<span class="cm">// ───── Build phiên bản 0 ─────</span>
+<span class="ty">int</span> <span class="fn">build</span>(<span class="ty">int</span> <span class="va">l</span>, <span class="ty">int</span> <span class="va">r</span>) {
+    <span class="ty">int</span> <span class="va">node</span> = <span class="fn">newNode</span>();
+    <span class="kw">if</span> (<span class="va">l</span> == <span class="va">r</span>) {
+        <span class="va">tree</span>[<span class="va">node</span>].<span class="va">val</span> = <span class="nu">0</span>; <span class="cm">// khởi tạo lá</span>
+        <span class="kw">return</span> <span class="va">node</span>;
+    }
+    <span class="ty">int</span> <span class="va">mid</span> = (<span class="va">l</span> + <span class="va">r</span>) >> <span class="nu">1</span>;
+    <span class="va">tree</span>[<span class="va">node</span>].<span class="va">l</span> = <span class="fn">build</span>(<span class="va">l</span>, <span class="va">mid</span>);
+    <span class="va">tree</span>[<span class="va">node</span>].<span class="va">r</span> = <span class="fn">build</span>(<span class="va">mid</span>+<span class="nu">1</span>, <span class="va">r</span>);
+    <span class="va">tree</span>[<span class="va">node</span>].<span class="va">val</span> = <span class="va">tree</span>[<span class="va">tree</span>[<span class="va">node</span>].<span class="va">l</span>].<span class="va">val</span>
+                   + <span class="va">tree</span>[<span class="va">tree</span>[<span class="va">node</span>].<span class="va">r</span>].<span class="va">val</span>;
+    <span class="kw">return</span> <span class="va">node</span>;
+}
+
+<span class="cm">// ───── Update: tạo phiên bản mới ─────
+// prev  : root của phiên bản cũ
+// pos   : vị trí cần cập nhật (đã nén tọa độ)
+// delta : thay đổi (+1 khi thêm phần tử)</span>
+<span class="ty">int</span> <span class="fn">update</span>(<span class="ty">int</span> <span class="va">prev</span>, <span class="ty">int</span> <span class="va">l</span>, <span class="ty">int</span> <span class="va">r</span>, <span class="ty">int</span> <span class="va">pos</span>, <span class="ty">int</span> <span class="va">delta</span>) {
+    <span class="ty">int</span> <span class="va">node</span> = <span class="fn">newNode</span>();
+    <span class="va">tree</span>[<span class="va">node</span>] = <span class="va">tree</span>[<span class="va">prev</span>]; <span class="cm">// copy từ phiên bản cũ</span>
+    <span class="va">tree</span>[<span class="va">node</span>].<span class="va">val</span> += <span class="va">delta</span>;
+
+    <span class="kw">if</span> (<span class="va">l</span> == <span class="va">r</span>) <span class="kw">return</span> <span class="va">node</span>; <span class="cm">// đã đến lá</span>
+
+    <span class="ty">int</span> <span class="va">mid</span> = (<span class="va">l</span> + <span class="va">r</span>) >> <span class="nu">1</span>;
+    <span class="kw">if</span> (<span class="va">pos</span> <= <span class="va">mid</span>)
+        <span class="cm">// đi trái → tạo node trái mới, giữ phải cũ</span>
+        <span class="va">tree</span>[<span class="va">node</span>].<span class="va">l</span> = <span class="fn">update</span>(<span class="va">tree</span>[<span class="va">prev</span>].<span class="va">l</span>, <span class="va">l</span>, <span class="va">mid</span>, <span class="va">pos</span>, <span class="va">delta</span>);
+    <span class="kw">else</span>
+        <span class="cm">// đi phải → tạo node phải mới, giữ trái cũ</span>
+        <span class="va">tree</span>[<span class="va">node</span>].<span class="va">r</span> = <span class="fn">update</span>(<span class="va">tree</span>[<span class="va">prev</span>].<span class="va">r</span>, <span class="va">mid</span>+<span class="nu">1</span>, <span class="va">r</span>, <span class="va">pos</span>, <span class="va">delta</span>);
+
+    <span class="kw">return</span> <span class="va">node</span>;
+}
+
+<span class="cm">// ───── Query: K-th smallest trên [ql, qr] ─────
+// u = root[l-1], v = root[r]  (chênh lệch = đoạn [l,r])
+// k : thứ tự cần tìm</span>
+<span class="ty">int</span> <span class="fn">kth</span>(<span class="ty">int</span> <span class="va">u</span>, <span class="ty">int</span> <span class="va">v</span>, <span class="ty">int</span> <span class="va">l</span>, <span class="ty">int</span> <span class="va">r</span>, <span class="ty">int</span> <span class="va">k</span>) {
+    <span class="kw">if</span> (<span class="va">l</span> == <span class="va">r</span>) <span class="kw">return</span> <span class="va">l</span>; <span class="cm">// tìm thấy</span>
+    <span class="ty">int</span> <span class="va">mid</span> = (<span class="va">l</span> + <span class="va">r</span>) >> <span class="nu">1</span>;
+    <span class="cm">// số phần tử trong con trái của đoạn [ql,qr]</span>
+    <span class="ty">int</span> <span class="va">leftCount</span> = <span class="va">tree</span>[<span class="va">tree</span>[<span class="va">v</span>].<span class="va">l</span>].<span class="va">val</span>
+                   - <span class="va">tree</span>[<span class="va">tree</span>[<span class="va">u</span>].<span class="va">l</span>].<span class="va">val</span>;
+    <span class="kw">if</span> (<span class="va">k</span> <= <span class="va">leftCount</span>)
+        <span class="kw">return</span> <span class="fn">kth</span>(<span class="va">tree</span>[<span class="va">u</span>].<span class="va">l</span>, <span class="va">tree</span>[<span class="va">v</span>].<span class="va">l</span>, <span class="va">l</span>, <span class="va">mid</span>, <span class="va">k</span>);
+    <span class="kw">else</span>
+        <span class="kw">return</span> <span class="fn">kth</span>(<span class="va">tree</span>[<span class="va">u</span>].<span class="va">r</span>, <span class="va">tree</span>[<span class="va">v</span>].<span class="va">r</span>, <span class="va">mid</span>+<span class="nu">1</span>, <span class="va">r</span>, <span class="va">k</span>-<span class="va">leftCount</span>);
+}
+
+<span class="cm">// ───── Main ─────</span>
+<span class="ty">int</span> <span class="fn">main</span>() {
+    ios::sync_with_stdio(<span class="nu">false</span>);
+    cin.tie(<span class="kw">nullptr</span>);
+
+    <span class="ty">int</span> <span class="va">n</span>, <span class="va">q</span>;
+    cin >> <span class="va">n</span> >> <span class="va">q</span>;
+
+    <span class="cm">// Đọc mảng + nén tọa độ</span>
+    vector&lt;<span class="ty">int</span>&gt; <span class="va">a</span>(<span class="va">n</span>), <span class="va">sorted</span>;
+    <span class="kw">for</span> (<span class="kw">auto</span>&amp; <span class="va">x</span> : <span class="va">a</span>) { cin >> <span class="va">x</span>; <span class="va">sorted</span>.<span class="fn">push_back</span>(<span class="va">x</span>); }
+    <span class="fn">sort</span>(<span class="va">sorted</span>.<span class="fn">begin</span>(), <span class="va">sorted</span>.<span class="fn">end</span>());
+    <span class="va">sorted</span>.<span class="fn">erase</span>(<span class="fn">unique</span>(<span class="va">sorted</span>.<span class="fn">begin</span>(), <span class="va">sorted</span>.<span class="fn">end</span>()), <span class="va">sorted</span>.<span class="fn">end</span>());
+    <span class="ty">int</span> <span class="va">m</span> = <span class="va">sorted</span>.<span class="fn">size</span>(); <span class="cm">// số giá trị phân biệt</span>
+
+    <span class="kw">auto</span> <span class="fn">compress</span> = [&](<span class="ty">int</span> <span class="va">x</span>) {
+        <span class="kw">return</span> <span class="fn">lower_bound</span>(<span class="va">sorted</span>.<span class="fn">begin</span>(), <span class="va">sorted</span>.<span class="fn">end</span>(), <span class="va">x</span>)
+               - <span class="va">sorted</span>.<span class="fn">begin</span>() + <span class="nu">1</span>; <span class="cm">// 1-indexed</span>
+    };
+
+    <span class="cm">// Build phiên bản 0 (rỗng)</span>
+    <span class="va">root</span>[<span class="nu">0</span>] = <span class="fn">build</span>(<span class="nu">1</span>, <span class="va">m</span>);
+
+    <span class="cm">// Thêm từng phần tử → tạo phiên bản mới</span>
+    <span class="kw">for</span> (<span class="ty">int</span> <span class="va">i</span> = <span class="nu">1</span>; <span class="va">i</span> <= <span class="va">n</span>; <span class="va">i</span>++) {
+        <span class="ty">int</span> <span class="va">pos</span> = <span class="fn">compress</span>(<span class="va">a</span>[<span class="va">i</span>-<span class="nu">1</span>]);
+        <span class="va">root</span>[<span class="va">i</span>] = <span class="fn">update</span>(<span class="va">root</span>[<span class="va">i</span>-<span class="nu">1</span>], <span class="nu">1</span>, <span class="va">m</span>, <span class="va">pos</span>, <span class="nu">1</span>);
+    }
+
+    <span class="cm">// Xử lý query</span>
+    <span class="kw">while</span> (<span class="va">q</span>--) {
+        <span class="ty">int</span> <span class="va">l</span>, <span class="va">r</span>, <span class="va">k</span>;
+        cin >> <span class="va">l</span> >> <span class="va">r</span> >> <span class="va">k</span>;
+        <span class="cm">// Phần tử thứ k nhỏ nhất trong a[l..r]</span>
+        <span class="ty">int</span> <span class="va">ans</span> = <span class="fn">kth</span>(<span class="va">root</span>[<span class="va">l</span>-<span class="nu">1</span>], <span class="va">root</span>[<span class="va">r</span>], <span class="nu">1</span>, <span class="va">m</span>, <span class="va">k</span>);
+        cout << <span class="va">sorted</span>[<span class="va">ans</span>-<span class="nu">1</span>] << <span class="st">'\n'</span>;
+    }
+    <span class="kw">return</span> <span class="nu">0</span>;
+}</pre>
+    </div>
+
+    <!-- PHẦN GIẢI THÍCH CHI TIẾT HÀM UPDATE -->
+    <h3 style="font-family:'Syne',sans-serif;font-size:1.2rem;margin:2rem 0 1rem;color:var(--text)">🔍 Giải thích hàm <code>update</code></h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <span class="code-title">update_explained.cpp</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="ty">int</span> <span class="fn">update</span>(<span class="ty">int</span> <span class="va">prev</span>, <span class="ty">int</span> <span class="va">l</span>, <span class="ty">int</span> <span class="va">r</span>, <span class="ty">int</span> <span class="va">pos</span>, <span class="ty">int</span> <span class="va">delta</span>) {
+    <span class="ty">int</span> <span class="va">node</span> = <span class="fn">newNode</span>();      <span class="cm">// (1) Tạo node mới (không xóa node cũ!)</span>
+    <span class="va">tree</span>[<span class="va">node</span>] = <span class="va">tree</span>[<span class="va">prev</span>];  <span class="cm">// (2) Copy toàn bộ từ phiên bản cũ</span>
+    <span class="va">tree</span>[<span class="va">node</span>].<span class="va">val</span> += <span class="va">delta</span>;  <span class="cm">// (3) Cập nhật giá trị node này</span>
+
+    <span class="kw">if</span> (<span class="va">l</span> == <span class="va">r</span>) <span class="kw">return</span> <span class="va">node</span>;   <span class="cm">// (4) Đến lá → kết thúc</span>
+
+    <span class="ty">int</span> <span class="va">mid</span> = (<span class="va">l</span> + <span class="va">r</span>) >> <span class="nu">1</span>;
+    <span class="kw">if</span> (<span class="va">pos</span> <= <span class="va">mid</span>)
+        <span class="cm">// (5a) pos ở nửa trái:</span>
+        <span class="cm">//  - Con trái → đệ quy tạo mới</span>
+        <span class="cm">//  - Con phải → giữ nguyên từ prev (chia sẻ!)</span>
+        <span class="va">tree</span>[<span class="va">node</span>].<span class="va">l</span> = <span class="fn">update</span>(<span class="va">tree</span>[<span class="va">prev</span>].<span class="va">l</span>, <span class="va">l</span>, <span class="va">mid</span>, <span class="va">pos</span>, <span class="va">delta</span>);
+    <span class="kw">else</span>
+        <span class="cm">// (5b) pos ở nửa phải:</span>
+        <span class="cm">//  - Con phải → đệ quy tạo mới</span>
+        <span class="cm">//  - Con trái → giữ nguyên từ prev (chia sẻ!)</span>
+        <span class="va">tree</span>[<span class="va">node</span>].<span class="va">r</span> = <span class="fn">update</span>(<span class="va">tree</span>[<span class="va">prev</span>].<span class="va">r</span>, <span class="va">mid</span>+<span class="nu">1</span>, <span class="va">r</span>, <span class="va">pos</span>, <span class="va">delta</span>);
+
+    <span class="kw">return</span> <span class="va">node</span>;  <span class="cm">// (6) Trả về root của subtree mới</span>
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 4: COMPLEXITY -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">04 — Phân tích</div>
+    <h2 class="section-title">Độ phức tạp & <span>So sánh</span></h2>
+    <div class="divider"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Thao tác</th>
+          <th>Segment Tree thường</th>
+          <th>Persistent Segment Tree</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Build</td>
+          <td><code>O(n)</code></td>
+          <td><code>O(n)</code></td>
+        </tr>
+        <tr>
+          <td>Update một điểm</td>
+          <td><code>O(log n)</code></td>
+          <td><code>O(log n)</code> — tạo thêm log n node</td>
+        </tr>
+        <tr>
+          <td>Query đoạn</td>
+          <td><code>O(log n)</code></td>
+          <td><code>O(log n)</code> — trên bất kỳ phiên bản</td>
+        </tr>
+        <tr>
+          <td>Bộ nhớ tổng</td>
+          <td><code>O(n)</code></td>
+          <td><code>O((n + q) log n)</code></td>
+        </tr>
+        <tr>
+          <td>Truy cập phiên bản cũ</td>
+          <td>❌ Không thể</td>
+          <td>✅ <code>O(1)</code> — qua <code>root[v]</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box success">
+      <strong>✅ Tóm tắt chi phí</strong>
+      <p>Mỗi thao tác update tốn thêm đúng <strong>⌊log₂ n⌋ + 1</strong> node. Với n = 10⁵ và q = 10⁵ truy vấn, cần ~4 triệu node — hoàn toàn khả thi với pool tĩnh 4–5 triệu phần tử.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: APPLICATIONS -->
+<section class="section" id="apply">
+  <div class="container">
+    <div class="section-label">05 — Ứng dụng</div>
+    <h2 class="section-title">Bài toán <span>kinh điển</span></h2>
+    <div class="divider"></div>
+
+    <div class="app-index">
+      <div class="app-item"><span class="ic">🏆</span> K-th smallest trên đoạn</div>
+      <div class="app-item"><span class="ic">📊</span> Đếm số phần tử trong khoảng</div>
+      <div class="app-item"><span class="ic">🔄</span> Rollback — hoàn tác update</div>
+      <div class="app-item"><span class="ic">🌳</span> HLD + PST trên cây</div>
+      <div class="app-item"><span class="ic">📅</span> Segment Tree theo thời gian</div>
+      <div class="app-item"><span class="ic">🗺️</span> Offline range query</div>
+      <div class="app-item"><span class="ic">🔢</span> Số nghịch thế trên đoạn</div>
+      <div class="app-item"><span class="ic">⚡</span> Merge Sort Tree thay thế</div>
+    </div>
+
+    <div class="info-box purple">
+      <strong>🎯 Bài tập thực hành (SPOJ / Codeforces)</strong>
+      <p><strong>SPOJ MKTHNUM</strong> — K-th Number (bài kinh điển nhất). <strong>CF 786C</strong> — Till I Collapse. <strong>CF 813F</strong> — Bipartite Classifier. <strong>VNOI TREAP</strong> — PST kết hợp LCA. Luyện tập các bài này sẽ thành thạo PST hoàn toàn.</p>
+    </div>
+
+    <!-- Rollback variant -->
+    <h3 style="font-family:'Syne',sans-serif;font-size:1.2rem;margin:2rem 0 1rem;color:var(--text)">🔄 Rollback — Undo thao tác</h3>
+    <p>Vì PST lưu tất cả phiên bản, rollback về trạng thái <code>k</code> bước trước cực kỳ đơn giản:</p>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <span class="code-title">rollback.cpp</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm">// Undo k bước — chỉ cần con trỏ!</span>
+<span class="ty">int</span> <span class="va">current_version</span> = <span class="va">n</span>;
+
+<span class="cm">// Rollback về k bước trước:</span>
+<span class="kw">auto</span> <span class="fn">rollback</span> = [&](<span class="ty">int</span> <span class="va">k</span>) {
+    <span class="va">current_version</span> -= <span class="va">k</span>;  <span class="cm">// O(1) !</span>
+};
+
+<span class="cm">// Query trên trạng thái hiện tại:</span>
+<span class="kw">auto</span> <span class="fn">query_current</span> = [&](<span class="ty">int</span> <span class="va">l</span>, <span class="ty">int</span> <span class="va">r</span>, <span class="ty">int</span> <span class="va">k</span>) {
+    <span class="kw">return</span> <span class="fn">kth</span>(<span class="va">root</span>[<span class="va">l</span>-<span class="nu">1</span>], <span class="va">root</span>[<span class="va">r</span>], <span class="nu">1</span>, <span class="va">m</span>, <span class="va">k</span>);
+    <span class="cm">// Sử dụng root[current_version] thay vì root[n]</span>
+};</pre>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 6: PITFALLS -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">06 — Cạm bẫy</div>
+    <h2 class="section-title">Lỗi thường <span>gặp</span></h2>
+    <div class="divider"></div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">💥</div>
+        <h3>Pool không đủ lớn</h3>
+        <p>Quên nhân với hằng số. Công thức an toàn: <code>(n + q) * 40</code>. Nếu MLE thì giảm constant.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐛</div>
+        <h3>Quên nén tọa độ</h3>
+        <p>Với bài k-th smallest, giá trị a[i] có thể đến 10⁹ — phải nén xuống [1, m] trước khi update.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚠️</div>
+        <h3>Off-by-one index</h3>
+        <p>Root version 0 thường là cây rỗng. Update phần tử i tạo root[i]. Query đoạn [l,r] dùng root[l-1] và root[r].</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔧</div>
+        <h3>Dùng <code>new</code> thay pool</h3>
+        <p>Dynamic allocation rất chậm với 10⁶ node. Luôn dùng mảng tĩnh + biến đếm <code>cnt</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <span style="color:var(--accent)">PST</span> · Persistent Segment Tree · C++ · O(log n) per operation
+  </div>
+</footer>
+
+<script>
+  function copyCode(btn) {
+    const pre = btn.closest('.code-wrap').querySelector('pre');
+    const text = pre.innerText || pre.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ copied';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  // Intersection Observer for fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.card, .info-box, .code-wrap, table, .steps li, .app-item').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(16px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
